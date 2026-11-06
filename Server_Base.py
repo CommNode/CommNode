@@ -1,23 +1,44 @@
 import socket
 
-# Creazione del socket
+'''
+1. Creazione del socket del server per accettare 
+   successivamente ogni tipo di connessione sulla
+   stessa rete.
+'''
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(("127.0.0.1", 5000)) # Creazione del socket con l'indirizzo IP locale
+server.bind(("0.0.0.0", 5000))
 
-# Metto in ascolto il server
+
+'''
+2. Metto in ascolto il server per poter far
+   connettere i client connessi sulla stessa
+   rete del medesimo server.
+'''
 server.listen()
 print("server in ascolto...")
 
-# Accettazione di una connessione e ricezione del messaggio
-connessione, indirizzo = server.accept()
-messaggio = connessione.recv(1024).decode()
 
-print(f"Client collegato con l'indirizzo {indirizzo}")
-print(f"Messaggio ricevuto: '{messaggio}'")
+'''
+3. Permetto al server di poter far connettere
+   N client per poter messaggiare.
+'''
+try:
+    while True:
+        connessione, indirizzo = server.accept()
 
-# Invio ai client di un messaggio di ricezione avvenuto
-connessione.send("Messaggio ricevuto!".encode())
+        try:
+            print(f"Client collegato con l'indirizzo {indirizzo}")
 
-# Chiusura del socket e della connessione
-connessione.close()
-server.close()
+            # Invio ai client di un messaggio di ricezione avvenuto
+            connessione.send("Benvenuto su CommNode!".encode())
+
+            # Ricezione di un messaggio di un client
+            messaggio = connessione.recv(1024).decode()
+        except Exception as e:
+            print(f"Errore con il client {indirizzo}: {e}")
+        finally:
+            connessione.close() # Chiusura del socket e della connessione
+except KeyboardInterrupt:
+    print("\nServer interrotto dall'utente!")
+finally:
+    server.close()
