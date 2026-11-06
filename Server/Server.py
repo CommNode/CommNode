@@ -24,16 +24,26 @@ print("server in ascolto...")
 '''
 try:
     while True:
+        # Accetto una connessione client
         connessione, indirizzo = server.accept()
 
         try:
             print(f"Client collegato con l'indirizzo {indirizzo}")
 
-            # Invio ai client di un messaggio di ricezione avvenuto
+            """
+            1. Invio al client che si connette il messaggio di benvenuto,
+               successivamente mando le istruzioni su come disconnettersi
+            """
             connessione.send("Benvenuto su CommNode!".encode())
+            connessione.send("Scrivere exit per disconnettersi dal server!".encode())
 
-            # Ricezione di un messaggio di un client
+            """
+            2. Ricevo un messaggio dal client, se il messaggio è
+               "exit" dico che quel client si è disconnesso.
+            """
             messaggio = connessione.recv(1024).decode()
+            if messaggio.lower() == "exit":
+                print(f"Il client con IP {indirizzo} si è disconnesso!")
         except Exception as e:
             print(f"Errore con il client {indirizzo}: {e}")
         finally:

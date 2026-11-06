@@ -1,11 +1,13 @@
+import Get_IP_Address
 import socket
 
 '''
 1. Creazione del socket del client per potersi connettere
    al server e comunicare con gli altri client.
 '''
+ip_address = Get_IP_Address.get_local_ip()
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(("127.0.0.1", 5000))
+client.connect((ip_address, 5000))
 
 
 '''
@@ -13,8 +15,10 @@ client.connect(("127.0.0.1", 5000))
    quando stabilisco la connessione e lo mando
    a video.
 '''
-risposta = client.recv(1024).decode()
-print(risposta)
+risposta_benvenuto = client.recv(1024).decode()
+istruzioni_disconnessione = client.recv(1024).decode()
+print(risposta_benvenuto)
+print(istruzioni_disconnessione)
 
 
 '''
@@ -30,10 +34,14 @@ try:
 
             '''
             Lancio l'eccezione se la lunghezza del messaggio
-            è pari a 0
+            è pari a 0, altrimenti se il messaggio è exit,
+            disconnetto il client dal server
             '''
             if len(messaggio) == 0:
                 raise Exception
+
+            if messaggio == "exit":
+                break
         except Exception as e:
             print(f"Errore durante l'invio del messaggio!")
 finally:
