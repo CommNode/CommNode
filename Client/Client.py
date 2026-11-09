@@ -1,9 +1,14 @@
 import socket
+import threading
 from .Get_IP_Address import get_local_ip
 
+"""
+Classe principale per la gestione del client
+"""
 class Client:
     def __init__(self):
         self.client = None
+        self.connesso = False
 
     # Funzione per creare il client e connetterlo al server
     def inizializza_client(self):
@@ -11,18 +16,48 @@ class Client:
         ip_address = get_local_ip()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((ip_address, port))
+        self.connesso = True
 
     """
-    2. Funzione per ricevere dal server i seguenti messaggi:
-        - Messaggio di benvenuto
-        - Istruzioni per la disconnessione dal server
+    2. Funzione che avvia in background la ricezione dei
+       messaggi dal server (benvenuto, istruzione, messaggi
+       dagli altri client).
+       
+       Ritorna subito, cosi può proseguire con invia_messaggi().
     """
     def ricezione_messaggio(self):
-        messaggio_benvenuto = self.client.recv(1024).decode()
-        istruzioni_disconnessione = self.client.recv(1024).decode()
+        thread = threading.Thread(target=self._ascolta_server, daemon=True)
+        thread.start()
 
-        print(messaggio_benvenuto)
-        print(istruzioni_disconnessione)
+    """
+    Funzione eseguita dal thread di ricezione:
+        Accumula i dati in un buffer e stampa un messaggio
+        per ogni riga(delimitatore \\n)
+    """
+    def _ascolta_server(self):
+        buffer = ""
+
+        try:
+            while self.connesso:
+                dati = self.client.recv(1024)
+
+                # recv vuoto: il server ha chiuso la connessione
+                if not dati:
+                    break
+
+                buffer += dati.decode(errors='replace')
+
+                while "\n" in buffer:
+                    riga, buffer = buffer.split("\n", 1)
+                    # stampo con flush=True per assicurarmi che il messaggio
+                    # appaia subito e con un a capo pulito prima del prossimo prompt
+                    print(riga, flush=True)
+        except OSError:
+            pass  # Socket chiuso localmente o connessione persa
+        finally:
+            if self.connesso:
+                print("\nConnessione chiusa dal server! Premi Invio per uscire.")
+            self.connesso = False
 
     """
     3. Funzione per la lettura del messaggio dell'utente
@@ -31,24 +66,31 @@ class Client:
     """
     def invia_messaggio(self):
         try:
-            while True:
+            while self.connesso:
+                messaggio_da_inviare = input()
+
+                # Se il server è caduto mentre si scrive, si esce
+                if not self.connesso:
+                    break
+
+                if len(messaggio_da_inviare.strip()) == 0:
+                    print("Errore: il messaggio non può essere vuoto!")
+                    continue
+
                 try:
-                    messaggio_da_inviare = input("Inserisci il messaggio da inviare: ")
+                    self.client.send(messaggio_da_inviare.encode())
+                except OSError:
+                    print("Errore durante l'invio del messaggio!")
+                    break
 
-                    """
-                    Lancio l'eccezione se la lunghezza del messaggio
-                    è pari a 0, altrimenti se il messaggio è "exit",
-                    disconnetto il client dal server
-                    """
-                    if len(messaggio_da_inviare) == 0:
-                        raise Exception
-                    else:
-                        # Invio eseguito una sola volta correttamente
-                        self.client.send(messaggio_da_inviare.encode())
-
-                    if messaggio_da_inviare == "exit":
-                        break
-                except Exception as e:
-                    print(f"Errore durante l'invio del messaggio!")
+                if messaggio_da_inviare.strip().lower() == "exit":
+                    break
         finally:
+            self.connesso = False
+
+            try:
+                self.client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
             self.client.close()

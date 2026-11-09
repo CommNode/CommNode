@@ -12,7 +12,12 @@ def get_local_ip() -> str:
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
     except Exception:
-        local_ip = "127.0.0.1"
+        # Se non c'è connettività esterna, tenta di ottenere
+        # l'IP dall'hostname per evitare di restituire localhost
+        try:
+            local_ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            local_ip = "127.0.0.1"
     finally:
         s.close()
 
