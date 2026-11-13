@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Aggiunge la cartella CommNode ai percorsi di ricerca di Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from Client.Client import Client
 
 def test_client():
