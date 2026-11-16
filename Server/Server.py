@@ -11,6 +11,8 @@ class Server:
         self.client_connessi = {}
         self.lock = threading.Lock()
         self.in_esecuzione = True
+        self.ip = "0.0.0.0"
+        self.port = 5000
 
     """
     1. Funzione per poter creare e mettere in ascolto
@@ -19,7 +21,7 @@ class Server:
     def inizializza_server(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind(("0.0.0.0", 5000))
+        self.server.bind((self.ip, self.port))
         self.server.listen()
         self.server.settimeout(1.0)
         print("Server in ascolto...")
