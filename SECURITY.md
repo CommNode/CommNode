@@ -24,7 +24,7 @@ If you discover a security vulnerability in this project, please report it as so
 
 ### Security Contact
 
-Please send reports to: security@commnode.local
+Please send reports to: cipriano.salvatore@outlook.com
 
 ### Preferred Approach
 
