@@ -1,22 +1,22 @@
 import sys
 import os
-
-# Aggiunge la cartella CommNode ai percorsi di ricerca di Python
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from Client.Client import Client
 
+# Adds CommNode folder to Python search paths
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 def test_client():
+    # Creating the client object
     my_client = Client()
 
-    # Inizializzo il client
-    my_client.inizializza_client()
+    # Client initialization
+    my_client.initialize_client()
 
-    # Ricevo i messaggi iniziali del server
-    my_client.ricezione_messaggio()
+    # Receiving initial server messages
+    my_client.reception_message()
 
-    # Invio un messaggio al server
-    my_client.invia_messaggio()
+    # Sending a message to the server
+    my_client.send_message()
 
 if __name__ == "__main__":
     test_client()

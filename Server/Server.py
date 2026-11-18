@@ -2,132 +2,132 @@ import socket
 import threading
 
 """
-Classe principale per la gestione del server
+Main class for server management
 """
 class Server:
-    # Inizializzazione della classe Server
+    # Initializing the Server class
     def __init__(self):
         self.server = None
-        self.client_connessi = {}
+        self.client_connected = {}
         self.lock = threading.Lock()
-        self.in_esecuzione = True
+        self.in_execution = True
         self.ip = "0.0.0.0"
         self.port = 5000
 
     """
-    1. Funzione per poter creare e mettere in ascolto
-       il server creando il socket
+    1. Function to be able to create and listen
+       the server by creating the socket
     """
-    def inizializza_server(self):
+    def initialize_server(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.ip, self.port))
         self.server.listen()
         self.server.settimeout(1.0)
-        print("Server in ascolto...")
+        print("Server listening...")
 
     """
-    2. Funzione che accetta N connessioni client:
-           Per ogni nuova connessione client,
-           creo un thread dedicato
+    2. Function that accepts N client connections:
+           For each new client connection,
+           I create a dedicated thread
     """
-    def connessione_client(self):
+    def client_connection(self):
         try:
-            while self.in_esecuzione:
+            while self.in_execution:
                 try:
                     conn, addr = self.server.accept()
                 except socket.timeout:
                     continue
 
-                # Registro il client nella struttura condivisa
+                # I register the client in the shared structure
                 with self.lock:
-                    self.client_connessi[conn] = addr
+                    self.client_connected[conn] = addr
 
                 thread = threading.Thread(
-                    target=self.gestisci_client,
+                    target=self.manage_client,
                     args=(conn, addr),
                     daemon=True
                 )
                 thread.start()
         except KeyboardInterrupt:
-            print("\nServer interrotto dall'utente!")
-        except Exception:
-            # Altre eccezioni impreviste vengono registrate ma non bloccano l'arresto
-            print("Errore imprevisto nel server!")
+            print("\nUser-interrupted server!")
+        except Exception as e:
+            # Other unexpected exceptions are logged but do not block the shutdown
+            print(f"Unexpected error in server: {e}")
         finally:
-            self.chiudi_server()
+            self.close_server()
 
     """
-    3. Funzione eseguita da un thread per ogni client:
-           Gestisce i messaggi di quel determinato
-           client connesso al server.
+    3. Function executed by a thread for each client:
+           Manages messages from that particular
+           client connected to the server.
     """
-    def gestisci_client(self, conn, addr):
+    def manage_client(self, conn, addr):
         try:
-            print(f"Client connesso con l'indirizzo {addr}")
+            print(f"Client connected with the address {addr}")
 
             """
-            Messaggio iniziale di benvenuto ed istruzione
-            su come disconnettersi dal server
+            Initial welcome message and instruction
+            on how to log out of the server
             """
             conn.sendall(
-                "Benvenuto su CommNode!\n"
-                "Scrivere exit per disconnettersi dal server!\n".encode()
+                "Welcome to CommNode!\n"
+                "Write exit to log out of the server!\n".encode()
             )
 
             while True:
-                messaggio = conn.recv(1024).decode().strip()
+                message = conn.recv(1024).decode().strip()
 
-                # Client disconnesso bruscamente o stringa vuota
-                if not messaggio:
+                # Client disconnected abruptly or empty string
+                if not message:
                     break
 
-                # Disconnessione volontaria del client dal server
-                if messaggio.lower() == "exit":
-                    print(f"Il clienti con IP {addr} si è disconnesso dal server!", flush=True)
+                # Voluntary client disconnection from the server
+                if message.lower() == "exit":
+                    print(f"The client with IP {addr} has disconnected from the server!", flush=True)
                     break
 
-                # Inoltro il messaggio agli altri client
-                self.broadcast(f"\n{addr[0]}:{addr[1]} > {messaggio}\n", conn)
+                # I forward the message to other clients
+                self.broadcast(f"\n{addr[0]}:{addr[1]} > {message}\n", conn)
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
-            print(f"Connessione persa con il client {addr}")
+            print(f"Lost connection with client {addr}")
         except Exception as e:
-            print(f"Errore con il client {addr}: {e}")
+            print(f"Error with client {addr}: {e}")
         finally:
-            # Rimozione del client dalla struttura condivisa
+            # Removing the client from the shared structure
             with self.lock:
-                self.client_connessi.pop(conn, None)
+                self.client_connected.pop(conn, None)
             conn.close()
 
     """
-    4. Funzione che invia un messaggio a tutti
-       i client connessi tranne al mittente
+    4. Function that sends a message to everyone
+       connected clients except the sender
     """
-    def broadcast(self, messaggio, mittente):
+    def broadcast(self, message, sender):
         with self.lock:
-            destinatari = list(self.client_connessi.keys())
+            recipients = list(self.client_connected.keys())
 
-        for client in destinatari:
-            if client is mittente:
+        for client in recipients:
+            if client is sender:
                 continue
             try:
-                client.sendall(messaggio.encode())
+                client.sendall(message.encode())
             except OSError:
-                pass  # Client già caduto: verrà rimosso dal suo thread
+                pass  # Client already dropped: will be removed from its thread
 
     """
-    5. Funzione per la chiusura ordinata del server
+    5. Function for orderly server closure
     """
-    def chiudi_server(self):
-        self.in_esecuzione = False
+    def close_server(self):
+        self.in_execution = False
 
         with self.lock:
-            for client in list(self.client_connessi.keys()):
+            for client in list(self.client_connected.keys()):
                 try:
                     client.close()
                 except OSError:
                     pass
-            self.client_connessi.clear()
+            self.client_connected.clear()
 
         self.server.close()
-        print("Server chiuso.")
+        print("Closed server.")
